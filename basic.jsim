@@ -48,11 +48,14 @@
 .subckt beta clk reset irq
 + ia[31:0] id[31:0] ma[31:0]
 + moe mrd[31:0] wr mwd[31:0] 
++ radata[31:0] // debug
 
     // sext
     // connect id and cext
-    xconnectcirc1 sext_c[31:16] id[15]#16 conn
-    xconnectcirc2 id[15:0] sext_c[15:0] conn
+    // xconnectcirc1 sext_c[31:16] id[15]#16 conn
+    // xconnectcirc2 id[15:0] sext_c[15:0] conn
+    xconnectcirc1 id[15]#16 id[15:0] sext_c[31:0] buffer
+
 
     // zero
     xzero radata[31:0] gettedZ getz
@@ -102,7 +105,7 @@
 
     // regfile
     xregfile clk werf ra2sel
-    + id[20:16] id[15:11] id[25:21]
+    + id[20:16] id[15:11] wa[4:0]
     + wdata[31:0]
     + radata[31:0] 
     + mwd[31:0]
@@ -127,12 +130,11 @@
 
     // WDSEL mux
     xwdselmux 
-    + wdsel[1]#32 
     + wdsel[0]#32 
-    + ia[31]
-    + ia_inc[30:0]
-    + mrd[31:0]
+    + wdsel[1]#32 
+    + ia_inc[31:0]
     + ma[31:0] 
+    + mrd[31:0]
     + 0#32 
     + wdata[31:0]
     + mux4

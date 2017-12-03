@@ -421,7 +421,9 @@
 + 23699ns 0x55555555
 + 23799ns 0x55555555
 
-Xbeta clk reset irq ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0] beta
+Xbeta clk reset irq ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0] 
++ radata[31:0]//debug
++ beta
 
 Xmem
 + vdd 0 0 ia[11:2] id[31:0]
@@ -518,6 +520,7 @@ Virq irq 0 pwl(0ns 0v, 1001ns 0v,
 .plot reset
 .plot irq
 .plot ia[31:0]
+.plot radata[31:0]
 .plot id[31:0]
 .plot ma[31:0]
 .plot moe

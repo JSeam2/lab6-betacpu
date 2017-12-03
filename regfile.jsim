@@ -4,7 +4,7 @@
 
 // REGFILE V2
 
-.subckt regfile clk werf ra2sel 
+.subckt regfile clk werf ra2sel
 + ra[4:0] rb[4:0] rc[4:0]
 + wdata[31:0] radata[31:0] rbdata[31:0]
 
