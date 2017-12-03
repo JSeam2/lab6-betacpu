@@ -1,8 +1,3 @@
-//------------------------------------------------------------
-// Tony Hyun Kim
-// 6.004: Lab 6
-//------------------------------------------------------------
-
 .include "import/nominal.jsim"
 .include "import/stdcell.jsim"
 .include "checkoff/lab6checkoff.jsim"
