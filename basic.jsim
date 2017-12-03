@@ -1,0 +1,156 @@
+//.include
+.include "import/nominal.jsim"
+.include "import/stdcell.jsim"
+.include "ctl.jsim"
+// alu is included here
+.include "helper.jsim"
+.include "pc.jsim"
+.include "regfile.jsim"
+.include "checkoff/lab6checkoff.jsim"
+
+// Notes for Convenience:
+// instruction address (ia[31:0], output). 
+//      Address of next instruction to be executed.
+
+// instruction data (id[31:0], input)
+//      After the appropriate propagation delay, the memory will
+//      drive these signals with the contents of the memory location 
+//      specified by ia[31:0].
+
+// data memory address (ma[31:0], output)
+//     Address of data memory location to be read or written.
+
+// memory output enable (moe, output)
+//      Set to 1 when the Beta wants the memory to read the
+//      memory location specified by ma[31:0].
+
+// memory read data (mrd[31:0], input)
+//      If moe is 1, the memory will drive these signals with
+//      the contents of the memory location specified by ma[31:0].
+
+// memory write enable (wr, output)
+//      Set to 1 when the Beta wants to store into the memory
+//      location specified by ma[31:0] at the end of the current cycle. 
+//      Becareful regarding valid logic values
+
+// memory write data (mwd[31:0], output).
+//      If wr is 1, this is the data that will be written into
+//      memory at the end of the current cycle.
+
+
+
+
+
+
+
+// BETA
+
+.subckt beta clk reset irq
++ ia[31:0] id[31:0] ma[31:0]
++ moe mrd[31:0] wr mwd[31:0] 
+
+    // sext
+    // connect id and cext
+    xconnectcirc1 sext_c[31:16] id[15]#16 conn
+    xconnectcirc2 id[15:0] sext_c[15:0] conn
+
+    // zero
+    xzero radata[31:0] gettedZ getz
+
+
+    // Components
+    // pc 
+    xpc 
+    + clk 
+    + reset
+    + pcsel[2:0]
+
+    // xaddr 
+    // 0x8000 0008
+    // 1000 0000 0000 0000 0000 0000 0000 1000
+    + vdd 0#27 vdd 0#3      
+
+    // illop 
+    // 0x8000 0004
+    // 1000 0000 0000 0000 0000 0000 0000 0100
+    + vdd 0#28 vdd 0#2    
+ 
+    + radata[31:0]             // JT
+    + sext_c[31:0]             // sext_c
+    + ia[31:0]                 // ia_incr
+    + ia_inc[31:0]
+    + addc[31:0]        
+    + pc
+
+
+    // ctl
+    xctl reset 
+    + gettedZ
+    + id[31:26]
+    + ra2sel
+    + bsel
+    + alufn[5:0]
+    + xwdsel[1:0]
+    + xwerf
+    + moe
+    + xwr
+    + xpcsel[2:0]
+    + asel
+    + xwasel
+    + ctl    
+
+
+    // regfile
+    xregfile clk werf ra2sel
+    + id[20:16] id[15:11] id[25:21]
+    + wdata[31:0]
+    + radata[31:0] 
+    + mwd[31:0]
+    + regfile
+
+    
+    // asel and bsel
+    xasel asel radata[31:0] 0 addc[30:0] aout[31:0] mux2_32
+    xbsel bsel mwd[31:0] sext_c[31:0] bout[31:0] mux2_32
+
+
+    // xwasel
+    // R30 = 11110
+    xwasel wasel#5 
+    + id[25:21] 
+    + vdd vdd vdd vdd 0 
+    + wa[4:0] 
+    + mux2
+
+    // ALU
+    xalu alufn[5:0] aout[31:0] bout[31:0] ma[31:0] z3 v3 n3 alu
+
+    // WDSEL mux
+    xwdselmux 
+    + wdsel[1]#32 
+    + wdsel[0]#32 
+    + ia[31]
+    + ia_inc[30:0]
+    + mrd[31:0]
+    + ma[31:0] 
+    + 0#32 
+    + wdata[31:0]
+    + mux4
+
+    
+
+    // IRQ
+    Xinverter ia31 usermode inverter
+    Xlogic1 irq usermode tointerrupt and2
+    Xlogic2 tointerrupt xwasel vdd wasel mux2
+    Xlogic3 tointerrupt xwerf vdd werf mux2
+    Xlogic4 tointerrupt#2 xwdsel[1:0] 0#2 wdsel[1:0] mux2
+    Xlogic5 tointerrupt xwr 0 wr mux2
+    Xlogic6 tointerrupt#3 xpcsel[2:0] vdd 0#2 pcsel[2:0] mux2
+    
+
+.ends
+
+
+
+

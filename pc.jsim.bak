@@ -1,0 +1,15 @@
+.include "nominal.jsim"
+.include "stdcell.jsim"
+.include "checkoff/lab6pc.jsim"
+
+
+.subckt pc clk reset ia[31:0]
+    constant
+.ends
+
+
+
+
+
+
+

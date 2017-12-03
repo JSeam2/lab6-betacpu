@@ -1,0 +1,42 @@
+//.include "import/stdcell.jsim"
+//.include "import/nominal.jsim"
+//.include "checkoff/lab6regfile.jsim"
+
+// REGFILE V2
+
+.subckt regfile clk werf ra2sel 
++ ra[4:0] rb[4:0] rc[4:0]
++ wdata[31:0] radata[31:0] rbdata[31:0]
+
+    Xregfile 
+    + vdd 0 0 ra[4:0] adata[31:0]           // A read port
+    + vdd 0 0 ra2mux[4:0] bdata[31:0]       // B read port
+    + 0 clk werf rc[4:0] wdata[31:0]        // write port
+    + $memory width=32 nlocations=31
+
+    // Settle RA2SEL
+    xra2mux ra2sel#5 rb[4:0] rc[4:0] ra2mux[4:0] mux2
+
+
+    // Make sure R31 is always 0
+    // We can use 5 input AND. if 0b11111 => 1
+    // We can detect the 1 and set output all to 0
+
+    // RA
+    xdetect1 ra[4:0] outA and5
+
+    // RB or RC
+    xdetect2 ra2mux[4:0] outB and5
+
+    xtoradata outA#32 adata[31:0] 0#32 radata[31:0] mux2
+    xtorbdata outB#32 bdata[31:0] 0#32 rbdata[31:0] mux2
+    .ends
+
+// 5 input AND gate 
+.subckt and5 a b c d e z
+    xand4 a b c d z1 and4 
+    xand2 z1 e z and2 
+
+.ends
+
+

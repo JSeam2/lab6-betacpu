@@ -1,0 +1,50 @@
+//.helper jsim subckt
+
+// TOOLS
+// connect
+.subckt conn a b
+.connect a b
+.ends
+
+// SIGN EXTENDER
+.subckt sext in[15:0] out[31:0]
+xconn1 out[31:16] in[15]#16 conn
+xconn2 in[15:0] out[15:0] conn
+.ends
+
+// Zero Detector
+.subckt getz s[31:0] z
+    Xnor01 s[3:0] nors01 nor4
+    Xnor02 s[7:4] nors02 nor4
+    Xnor03 s[11:8] nors03 nor4
+    Xnor04 s[15:12] nors04 nor4
+    Xnor05 s[19:16] nors05 nor4
+    Xnor06 s[23:20] nors06 nor4
+    Xnor07 s[27:24] nors07 nor4
+    Xnor08 s[31:28] nors08 nor4
+    
+    Xnor10 nors01 nors02 nors03 nors04 nor10 and4
+    Xnor11 nors05 nors06 nors07 nors08 nor11 and4
+    Xnor20 nor10 nor11 z and2
+.ends
+
+// 2 Way 32 Bit mux
+.subckt mux2_32 sel A[31:0] B[31:0] out[31:0]
+Xmux sel#32 A[31:0] B[31:0] out[31:0] mux2
+.ends
+
+// 3 WAY 32 bit mux ignore an option
+.subckt mux3_32 sel[1:0] inputA[31:0] inputB[31:0] inputC[31:0] out[31:0]
+xmux sel0#32 sel1#32 inputA[31:0] inputB[31:0] inputC[31:0] 0#32 out[31:0] mux4
+.ends
+
+// 5 way 32 bit mux
+.subckt mux5_32 sel[2:0] A[31:0] B[31:0] C[31:0] D[31:0] E[31:0] out[31:0]
+xmuxA sel0#32 sel1#32 A[31:0] B[31:0] C[31:0] D[31:0] z[31:0] mux4
+xmuxB sel2#32 z[31:0] E[31:0] out[31:0] mux2
+.ends
+
+.subckt dreg_32 clk in[31:0] out[31:0]
+Xdreg in[31:0] clk#32 out[31:0] dreg
+.ends
+

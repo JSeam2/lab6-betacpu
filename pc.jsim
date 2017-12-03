@@ -1,0 +1,52 @@
+//.include "import/nominal.jsim"
+//.include "import/stdcell.jsim"
+//.include "checkoff/lab6pc.jsim"
+//.include "helper.jsim"
+.include "alu.jsim"
+
+// Program Counter with new additions
+.subckt pc clk reset pcsel[2:0] 
++ xaddr[31:0] illop[31:0] jt[31:0] sext_c[31:0] 
++ ia[31:0] ia_inc[31:0] addc[31:0] 
+
+    // ia_inc
+    xiainc 0 ia[31:0] 0#29 vdd 0#2 ia_inc[31:0] z v n FA32
+    // xiainc ia[31:0] 0#29 vdd 0#2 cx ia_inc[31:0] ADDER32
+
+    // sext_c
+    xplusc 0 sext_c[29:0] 0#2 ia_inc[31:0] addc[31:0] z2 v2 n2 FA32
+    // xplusc sext_c[29:0] 0#2 ia_inc[31:0] cxx addc[31:0] ADDER32
+
+    // XFA32_INC ia[31:0] 0#29 vdd 0#2 0 ia_inc[31:0] co fa32
+    // XFA32_ADDC ia_inc[31:0] sext_c[29:0] 0#2 0 addc[31:0] co2 fa32
+    
+    // new pc 31 bit
+    xand ia31 jt31 newpc31 and2
+
+    // 5 input mux
+    // get pcsel
+    // 0: ia_inc, 1: sext_c, 2: jt, 3: illop, 4: xaddr   
+    xmux5 pcsel[2:0] 
+    + ia_inc[31:0]
+    + addc[31:0] 
+    + newpc31 jt[30:2] 0 0 
+    + illop[31:0]
+    + xaddr[31:0] 
+    + ia_next[31:0] mux5_32
+
+    
+    // 2 input mux for rst signal
+    xmux reset ia_next[31:0] vdd 0#31 next_pc[31:0] mux2_32
+
+
+    // dreg to get input after every clock cycle
+    xdreg32 clk next_pc[31:0] ia[31:0] dreg_32
+
+.ends
+
+
+
+
+
+
+

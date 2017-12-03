@@ -1,0 +1,35 @@
+//.include "import/nominal.jsim"
+//.include "import/stdcell.jsim"
+//.include "checkoff/lab6pc.jsim"
+.include "alu.jsim"
+
+
+.subckt pc clk reset ia[31:0]
+    // +4 val
+    xa1 a[31:3] constant0
+    xa2 a[2] constant1
+    xa3 a[1:0] constant0
+
+    // + 4
+    xplusfour 0 ia[31:0] a[31:0] outfour[31:0] z v n FA32
+
+    // mux signal from reset
+    // if reset == 1: 
+    //	output 0
+    // else if reset == 0:
+    //	output +4 
+
+    xpcmux reset#32 outfour[31:0] 0#32 outmux[31:0] mux2
+    
+
+    * dreg to get output from mux every clock cycle
+    
+    xreg outmux[31:0] clk#32 ia[31:0] dreg
+.ends
+
+
+
+
+
+
+

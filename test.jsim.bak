@@ -1,0 +1,229 @@
+//------------------------------------------------------------
+// Tony Hyun Kim
+// 6.004: Lab 6
+//------------------------------------------------------------
+
+.include "import/nominal.jsim"
+.include "import/stdcell.jsim"
+.include "checkoff/lab6checkoff.jsim"
+
+//------------------------------------------------------------
+// PROGRAM COUNTER
+//------------------------------------------------------------
+
+.subckt mux2_32 sel A[31:0] B[31:0] out[31:0]
+Xmux sel#32 A[31:0] B[31:0] out[31:0] mux2
+.ends
+
+.subckt dreg_32 clk in[31:0] out[31:0]
+Xdreg in[31:0] clk#32 out[31:0] dreg
+.ends
+
+// 1-bit full-adder circuit, using the stdcell library (FROM LAB3)
+.subckt fa a b ci s co
+XAND1 a ci aci and2
+XAND2 a b  ab  and2
+XAND3 b ci bci and2
+XOR aci ab bci co or3
+
+XXOR1 a b abxor xor2
+XXOR2 abxor ci s xor2
+.ends
+
+// Shorthand for constructing a 32-bit ripple carry full-adder
+.subckt fa32 a[31:0] b[31:0] ci s[31:0] co
+XFA a[31:0] b[31:0] co[30:0] ci s[31:0] co[31:0] fa
+.connect co co31
+.ends
+
+.subckt pc clk reset pcsel[2:0] xad[31:0] illop[31:0] jt[31:0] sext_c[31:0] ia[31:0] ia_inc[31:0] addc[31:0]// ia = instruction address
+XFA32_INC ia[31:0] 0#29 vdd 0#2 0 ia_inc[31:0] co fa32
+XFA32_ADDC ia_inc[31:0] sext_c[29:0] 0#2 0 addc[31:0] co2 fa32
+XAND ia31 jt31 newpc31 and2
+XMUX5_32 pcsel[2:0] ia_inc[31:0] addc[31:0] 
++ newpc31 jt[30:2] 0 0 // Note JT31 logic and the forcing of bottom two bits to zero
++ illop[31:0] xad[31:0] ia_next[31:0] mux5_32
+XMUX32 reset ia_next[31:0] vdd 0#31 next_pc[31:0] mux2_32 // Note that reset starts in supervisor mode
+XDREG32 clk next_pc[31:0] ia[31:0] dreg_32
+.ends
+
+//------------------------------------------------------------
+// REGFILE
+//------------------------------------------------------------
+.subckt mux2_5 sel A[4:0] B[4:0] out[4:0]
+Xmux sel#5 A[4:0] B[4:0] out[4:0] mux2
+.ends
+
+.subckt reg32test A[4:0] r32
+XAND1 A[4:3] out1 and2
+XAND2 A[2:0] out2 and3
+XAND3 out1 out2 r32 and2
+.ends
+
+.subckt regfile clk werf ra2sel ra[4:0] rb[4:0] rc[4:0] wdata[31:0] radata[31:0] rbdata[31:0]
+XMUX5 ra2sel rb[4:0] rc[4:0] ra2mux[4:0] mux2_5
+Xregfile
++ vdd 0 0 ra[4:0] adata[31:0]     // A read port
++ vdd 0 0 ra2mux[4:0] bdata[31:0] // B read port
++ 0 clk werf rc[4:0] wdata[31:0]  // write port
++ $memory width=32 nlocations=31
+Xreg32test_a ra[4:0] r32_a reg32test
+XMUX32_a r32_a adata[31:0] 0#32 radata[31:0] mux2_32
+Xreg32test_b ra2mux[4:0] r32_b reg32test
+XMUX32_b r32_b bdata[31:0] 0#32 rbdata[31:0] mux2_32
+.ends
+
+//------------------------------------------------------------
+// CONTROL LOGIC
+//------------------------------------------------------------
+.subckt ctl reset z id[31:26] ra2sel bsel alufn[5:0] wdsel[1:0] werf moe wr pcsel[2:0] asel wasel
+Xctl vdd 0 0 id[31:26] // one read port
++ xpcsel[2:0] wasel asel ra2sel bsel alufn[5:0] wdsel[1:0] werf moe xwr
++ $memory width=18 nlocations=64 contents=(
++ 0b011100000000000100 // opcode = 0b000000 NOP
++ 0b011100000000000100 // opcode = 0b000001 NOP
++ 0b011100000000000100 // opcode = 0b000010 NOP
++ 0b011100000000000100 // opcode = 0b000011 NOP
++ 0b011100000000000100 // opcode = 0b000100 NOP
++ 0b011100000000000100 // opcode = 0b000101 NOP
++ 0b011100000000000100 // opcode = 0b000110 NOP
++ 0b011100000000000100 // opcode = 0b000111 NOP
++ 0b011100000000000100 // opcode = 0b001000 NOP
++ 0b011100000000000100 // opcode = 0b001001 NOP
++ 0b011100000000000100 // opcode = 0b001010 NOP
++ 0b011100000000000100 // opcode = 0b001011 NOP
++ 0b011100000000000100 // opcode = 0b001100 NOP
++ 0b011100000000000100 // opcode = 0b001101 NOP
++ 0b011100000000000100 // opcode = 0b001110 NOP
++ 0b011100000000000100 // opcode = 0b001111 NOP
++ 0b011100000000000100 // opcode = 0b010000 NOP
++ 0b011100000000000100 // opcode = 0b010001 NOP
++ 0b011100000000000100 // opcode = 0b010010 NOP
++ 0b011100000000000100 // opcode = 0b010011 NOP
++ 0b011100000000000100 // opcode = 0b010100 NOP
++ 0b011100000000000100 // opcode = 0b010101 NOP
++ 0b011100000000000100 // opcode = 0b010110 NOP
++ 0b011100000000000100 // opcode = 0b010111 NOP
++ 0b000000100000010110 // opcode = 0b011000 LD
++ 0b000001100000000001 // opcode = 0b011001 ST
++ 0b011100000000000100 // opcode = 0b011010 NOP
++ 0b010000000000000100 // opcode = 0b011011 JMP 
++ 0b011100000000000100 // opcode = 0b011100 NOP
++ 0b101000000000000100 // opcode = 0b011101 BEQ 
++ 0b111000000000000100 // opcode = 0b011110 BNE 
++ 0b000010001101010110 // opcode = 0b011111 LDR
++ 0b000000000000001100 // opcode = 0b100000 ADD
++ 0b000000000000101100 // opcode = 0b100001 SUB
++ 0b011000000000000100 // opcode = 0b100010 MUL (OPTIONAL)
++ 0b011000000000000100 // opcode = 0b100011 DIV (OPTIONAL)
++ 0b000000011001101100 // opcode = 0b100100 CMPEQ
++ 0b000000011010101100 // opcode = 0b100101 CMPLT
++ 0b000000011011101100 // opcode = 0b100110 CMPLE
++ 0b011100000000000100 // opcode = 0b100111 NOP
++ 0b000000001100001100 // opcode = 0b101000 AND
++ 0b000000001111001100 // opcode = 0b101001 OR
++ 0b000000001011001100 // opcode = 0b101010 XOR
++ 0b011100000000000100 // opcode = 0b101011 NOP
++ 0b000000010000001100 // opcode = 0b101100 SHL
++ 0b000000010000101100 // opcode = 0b101101 SHR
++ 0b000000010001101100 // opcode = 0b101110 SRA
++ 0b011100000000000100 // opcode = 0b101111 NOP
++ 0b000000100000001100 // opcode = 0b110000 ADDC
++ 0b000000100000101100 // opcode = 0b110001 SUBC
++ 0b011000000000000100 // opcode = 0b110010 MULC (OPTIONAL)
++ 0b011000000000000100 // opcode = 0b110011 DIVC (OPTIONAL)
++ 0b000000111001101100 // opcode = 0b110100 CMPEQC
++ 0b000000111010101100 // opcode = 0b110101 CMPLTC
++ 0b000000111011101100 // opcode = 0b110110 CMPLEC
++ 0b011100000000000100 // opcode = 0b110111 NOP
++ 0b000000101100001100 // opcode = 0b111000 ANDC
++ 0b000000101111001100 // opcode = 0b111001 ORC
++ 0b000000101011001100 // opcode = 0b111010 XORC
++ 0b011100000000000100 // opcode = 0b111011 NOP
++ 0b000000110000001100 // opcode = 0b111100 SHLC
++ 0b000000110000101100 // opcode = 0b111101 SHRC
++ 0b000000110001101100 // opcode = 0b111110 SRAC
++ 0b011100000000000100 // opcode = 0b111111 NOP
++ )
+
+// Logic to force WR = 0 at reset
+Xinv reset reset_inv inverter_2
+XAND xwr reset_inv wr and2
+
+// Z logic for BNE, BEQ
+XAND2 xpcsel2 xpcsel0 branch and2
+XINVZ z zinv inverter_2
+XMUXZ xpcsel1 z zinv pcsel_branch mux2
+XMUXBR branch#3 xpcsel[2:0] 0 0 pcsel_branch pcsel[2:0] mux2
+.ends
+
+//------------------------------------------------------------
+// BETA BODY
+//------------------------------------------------------------
+//.include "lab6checkoff.jsim" //debug version
+
+.subckt knex a b
+.connect a b
+.ends
+
+.subckt sgnextend in[15:0] out[31:0]
+.connect out[31:16] in15
+XKNEX in[15:0] out[15:0] knex
+.ends
+
+// three-way 32-bit mux (four way, but discard one of the options)
+.subckt mux3_32 sel[1:0] A[31:0] B[31:0] C[31:0] out[31:0]
+Xmux sel0#32 sel1#32 A[31:0] B[31:0] C[31:0] 0#32 out[31:0] mux4
+.ends
+
+// five-way 32-bit mux
+.subckt mux5_32 sel[2:0] A[31:0] B[31:0] C[31:0] D[31:0] E[31:0] out[31:0]
+Xfirstmux sel0#32 sel1#32 A[31:0] B[31:0] C[31:0] D[31:0] int[31:0] mux4
+Xsecndmux sel2#32 int[31:0] E[31:0] out[31:0] mux2
+.ends
+
+//------------------------------------------------------------
+// BETA STARTS HERE
+//------------------------------------------------------------
+.subckt beta clk reset irq ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0] 
+//+ radata[31:0] a[31:0] wdselout[31:0] bsel// for debugging
+//XPC clk reset ia[31:0] pc
+
+XPC clk reset pcsel[2:0] 
++ vdd 0#27 vdd 0 0 0 // XAdr (0x8000_0008)
++ vdd 0#27 0 vdd 0 0 // IllOp (0x8000_0004)
++ radata[31:0] // JT
++ sext_c[31:0]
++ ia[31:0] ia_inc[31:0] addc[31:0]
++ pc
+
+XCTL reset ra_zero id[31:26] ra2sel bsel alufn[5:0] xwdsel[1:0] xwerf moe xwr xpcsel[2:0] asel xwasel ctl
+
+// We now add lots of logic to implement IRQ, which takes over everything
+XINV_PC31 ia31 user_mode inverter_2
+XAND_IRQ irq user_mode irq_valid and2
+XMUX_PCSEL irq_valid#3 xpcsel[2:0] vdd 0 0 pcsel[2:0] mux2
+XMUX_WASEL irq_valid xwasel vdd wasel mux2
+XMUX_WERF irq_valid xwerf vdd werf mux2
+XMUX_WDSEL irq_valid#2 xwdsel[1:0] 0 0 wdsel[1:0] mux2
+XMUX_WR irq_valid xwr 0 wr mux2
+
+
+XREGFILE clk werf ra2sel id[20:16] id[15:11] wa[4:0] wdselout[31:0] radata[31:0] mwd[31:0] regfile
+
+XSGNEXTEND id[15:0] sext_c[31:0] sgnextend
+
+XZERO radata[31:0] ra_zero zero
+
+XASEL asel radata[31:0] 0 addc[30:0] a[31:0] mux2_32
+XBSEL bsel mwd[31:0] sext_c[31:0] b[31:0] mux2_32
+
+XWASEL wasel#5 id[25:21] 
++ vdd vdd vdd vdd 0 // XP (exception pointer) (R30)
++ wa[4:0] mux2
+
+XALU alufn[5:0] a[31:0] b[31:0] ma[31:0] z v n alu
+
+XWDSEL wdsel[1:0] ia_inc[31:0] ma[31:0] mrd[31:0] wdselout[31:0] mux3_32
+
+.ends
